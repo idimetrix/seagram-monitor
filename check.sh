@@ -20,6 +20,11 @@ off=$(curl -s --doh-url https://1.1.1.1/dns-query -m 20 https://$MAIN/sitemap.xm
 [ "$off" = 0 ] || bad "$off sitemap URLs are not on https://$MAIN"
 curl -s --doh-url https://1.1.1.1/dns-query -m 20 https://$MAIN/es | grep -q "rel=\"canonical\" href=\"https://$MAIN/es\"" || bad "home canonical is not https://$MAIN/es"
 
+# the admin panel lives on admin.seagram.do; the old vercel.app name must keep forwarding there
+code=$(curl -s --doh-url https://1.1.1.1/dns-query -o /dev/null -m 20 -w '%{http_code}' https://admin.$MAIN/login); [ "$code" = 200 ] || bad "https://admin.$MAIN/login returned $code"
+r=$(curl -s --doh-url https://1.1.1.1/dns-query -o /dev/null -m 20 -w '%{http_code} %{redirect_url}' https://admin-seagram-industrial.vercel.app/login)
+[ "$r" = "308 https://admin.$MAIN/login" ] || bad "old admin host redirect is '$r'"
+
 for d in $ALIASES; do for h in $d www.$d; do
   r=$(curl -s --doh-url https://1.1.1.1/dns-query -o /dev/null -m 20 -w '%{http_code} %{redirect_url}' "https://$h/x")
   [ "$r" = "308 https://$MAIN/x" ] || bad "$h redirect is '$r'"
