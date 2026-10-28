@@ -14,6 +14,12 @@ print((t-d.datetime.now(d.timezone.utc)).days)' "$1" 2>/dev/null || echo -1; }
 
 code=$(curl -s --doh-url https://1.1.1.1/dns-query -o /dev/null -m 20 -w '%{http_code}' https://$MAIN/es); [ "$code" = 200 ] || bad "https://$MAIN/es returned $code"
 
+# Google rejects every sitemap URL on another host ("URL not allowed"): this happened once while NEXT_PUBLIC_SITE_URL
+# was unset and the sitemap listed seagram-industrial.vercel.app
+off=$(curl -s --doh-url https://1.1.1.1/dns-query -m 20 https://$MAIN/sitemap.xml | grep -oE '<loc>https?://[^/<]+' | grep -vc "<loc>https://$MAIN")
+[ "$off" = 0 ] || bad "$off sitemap URLs are not on https://$MAIN"
+curl -s --doh-url https://1.1.1.1/dns-query -m 20 https://$MAIN/es | grep -q "rel=\"canonical\" href=\"https://$MAIN/es\"" || bad "home canonical is not https://$MAIN/es"
+
 for d in $ALIASES; do for h in $d www.$d; do
   r=$(curl -s --doh-url https://1.1.1.1/dns-query -o /dev/null -m 20 -w '%{http_code} %{redirect_url}' "https://$h/x")
   [ "$r" = "308 https://$MAIN/x" ] || bad "$h redirect is '$r'"
